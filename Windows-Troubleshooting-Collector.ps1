@@ -11,6 +11,12 @@ $file = 'C:\Troubleshooting Script Logs'
 #Location of output log for further analysis.
 $Log = 'C:\Troubleshooting Script Logs\Troubleshooting.log'
 
+#Location of SFC output for further analysis. 
+$SFCLog = "C:\Troubleshooting Script Logs\sfc.log"
+
+#Location of DISM  output for further analysis. 
+$DISMLOG = "C:\Troubleshooting Script Logs\dism.log"
+
 #Location of output for event viewer for further analysis.
 $EventView = 'C:\Troubleshooting Script Logs\EventViewer.log'
 
@@ -18,8 +24,8 @@ $EventView = 'C:\Troubleshooting Script Logs\EventViewer.log'
 $time = get-date -Format T
 
 #Default locations of DISM & SFC logs. 
-$DISMLOG = 'C:\windows\logs\DISM\dism.log'
-$SFCLOG = 'C:\windows\logs\cbs\CBS.log'
+$DISMDIR = 'C:\windows\logs\DISM\dism.log'
+$SFCDIR = 'C:\windows\logs\cbs\CBS.log'
 
 #Function used to write to the log directory, record error types, brief error descriptions and prompt the user if they would like to continue the script execution. 
 Function Write-Log{
@@ -78,7 +84,7 @@ Start-Process -FilePath dism.exe -ArgumentList '/Online', '/Cleanup-Image', '/Sc
 
 #Grabs output of the DISM scan then pipes it to a newly created log file called dism.log. 
 write-log "DISM:" "DISM Scan was successful, grabbing DISM Logs for further analysis..." 'n' $Log
-get-content -path $DISMLOG | set-content "$file\dism.log" -ErrorAction SilentlyContinue
+get-content -path $DISMDIR | set-content $DISMLOG -ErrorAction SilentlyContinue
 
 #Starts SFC then appends the results to the log file for further analysis. 
 Write-Output "`n" | Out-File $Log -Append
@@ -87,7 +93,20 @@ Start-Process -FilePath "C:\Windows\System32\sfc.exe" -ArgumentList '/scannow' -
 
 #Grabs output of the SFC scan then pipes it to a newly created sfc file called SFC.log. 
 write-log "SFC:" "SFC Scan was successful, grabbing SFC Logs for further analysis..." 'n' $Log
-get-content -path $SFCLOG | Set-Content "$file\sfc.log" -ErrorAction SilentlyContinue
+get-content -path $SFCDIR | Set-Content $SFCLog -ErrorAction SilentlyContinue
+
+#Sifts through SFC results then writes results to the log. 
+$SFCResult = Select-String -Path $SFCLOG -Pattern 'corrupted file','repairing corrupted file','repaired file','cannot repair member file'
+
+if($SFCResult -like "*") 
+{ 
+    write-log "SFC:" "SFC found errors, please reference the SFC.log" 'n' $Log
+} 
+
+else 
+{
+    write-log "SFC:" "SFC found no corrupted components." 'n' $Log
+}
 
 #Sifts through Event Viewer for events that are critical and error type in the application & system logs in the last 7 days. 
 Write-Output "`n" | Out-File $Log -Append
