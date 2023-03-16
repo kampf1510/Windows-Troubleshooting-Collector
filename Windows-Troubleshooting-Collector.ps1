@@ -80,16 +80,30 @@ Test-NetConnection 'Google.com'  -InformationLevel "Detailed" | Format-Table -Au
 
 #Runs a DISM check then appends the result to the log file for further analysis. 
 write-log "DISM:" "Starting DISM Scan..." 'n' $Log
-Start-Process -FilePath dism.exe -ArgumentList '/Online', '/Cleanup-Image', '/ScanHealth' -WindowStyle Hidden -Wait -ErrorAction Inquire
+Start-Process -FilePath dism.exe -ArgumentList '/Online', '/Cleanup-Image', '/ScanHealth' -Wait -ErrorAction Inquire
+Start-Process -FilePath dism.exe -ArgumentList '/Online', '/Cleanup-Image', '/Restorehealth' -Wait -ErrorAction Inquire
 
 #Grabs output of the DISM scan then pipes it to a newly created log file called dism.log. 
 write-log "DISM:" "DISM Scan was successful, grabbing DISM Logs for further analysis..." 'n' $Log
 get-content -path $DISMDIR | set-content $DISMLOG -ErrorAction SilentlyContinue
 
+#Sifts through DISM results then writes results to the log.
+$DISMResult = Select-String -Path $DISMLog -Pattern 'corrupt','failed' 
+
+if($DISMResult -like "*") 
+{ 
+    write-log "DISM:" "DISM found errors, please reference the DISM.log" 'n' $Log
+} 
+
+else 
+{
+    write-log "DISM:" "DISM found no corrupted components." 'n' $Log
+}
+
 #Starts SFC then appends the results to the log file for further analysis. 
 Write-Output "`n" | Out-File $Log -Append
 write-log "SFC:" "Starting SFC Scan..." 'n' $Log
-Start-Process -FilePath "C:\Windows\System32\sfc.exe" -ArgumentList '/scannow' -Wait -Verb RunAs -WindowStyle Hidden -ErrorAction Inquire
+Start-Process -FilePath "C:\Windows\System32\sfc.exe" -ArgumentList '/scannow' -Wait -ErrorAction Inquire
 
 #Grabs output of the SFC scan then pipes it to a newly created sfc file called SFC.log. 
 write-log "SFC:" "SFC Scan was successful, grabbing SFC Logs for further analysis..." 'n' $Log
