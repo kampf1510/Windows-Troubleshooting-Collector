@@ -133,6 +133,16 @@ write-log "CHKDSK:" "Starting chkdsk / repair-volume on C:\ drive." 'n' $Log
 Write-Output "CHKDSK: Repair-Volume Results:" | Out-File $Log -NoNewline -Append
 Repair-Volume -DriveLetter C -Scan -Verbose 4>&1 | Out-File $log -Append
 
+#Runs the defrag utility on the C: drive to analyze if the drive is fragmented. 
+Write-Output "`n" | Out-File $Log -Append
+write-log "Defrag" "Starting drive optimization on C:\ drive." 'n' $Log 
+Optimize-Volume C –Analyze -Verbose 
+
+#Runs the disk cleanup utility. 
+Write-Output "`n" | Out-File $Log -Append
+write-log "Disk Cleanup:" "Starting Disk Cleanup.." 'n' $Log  
+cleanmgr /sagerun:1 | out-Null    
+
 #The script is finished, notepad is automatically opened to the location of the main log file. 
 Write-Host "Script execution has concluded, opening troubleshooting log in 5 seconds. 
 
